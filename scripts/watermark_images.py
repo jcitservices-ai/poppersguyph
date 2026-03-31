@@ -8,6 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 WATERMARK_TEXT = "@PoppersGuyPH"
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".avif"}
+IGNORED_DIRS = {".git", "originals_before_watermark", "__pycache__"}
 
 
 def load_font(image_width: int) -> ImageFont.ImageFont:
@@ -73,19 +74,17 @@ def apply_watermark(image_path: Path) -> None:
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    backup_dir = repo_root / "originals_before_watermark"
-    backup_dir.mkdir(exist_ok=True)
-
     image_paths = sorted(
-        path for path in repo_root.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+        path
+        for path in repo_root.rglob("*")
+        if path.is_file()
+        and path.suffix.lower() in IMAGE_EXTENSIONS
+        and not any(part in IGNORED_DIRS for part in path.parts)
     )
 
     for image_path in image_paths:
-        backup_path = backup_dir / image_path.name
-        if not backup_path.exists():
-            shutil.copy2(image_path, backup_path)
         apply_watermark(image_path)
-        print(f"Watermarked {image_path.name}")
+        print(f"Watermarked {image_path.relative_to(repo_root)}")
 
 
 if __name__ == "__main__":
